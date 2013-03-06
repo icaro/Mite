@@ -16,7 +16,8 @@ namespace Mite.Core
         public MigrationTracker(IEnumerable<Migration> migrations, IDictionary<string, string> hashes)
         {
             this.migrations = migrations.OrderBy(x => x.Version).ToList();
-            this.hashes = hashes ?? new Dictionary<string, string>();
+            this.hashes = hashes != null ? hashes.OrderBy(h => h.Key).ToDictionary(h => h.Key, h => h.Value) :
+                new Dictionary<string, string>();
         }
         public IEnumerable<Migration> MigrationsSince(DateTime dateTime)
         {
