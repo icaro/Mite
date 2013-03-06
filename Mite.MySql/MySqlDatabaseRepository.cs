@@ -114,5 +114,38 @@ namespace Mite.MySql
                 return sql;    
        }
 
+        public override MigrationTracker ExecuteDown(Migration migration)
+        {
+            if (!MigrationTableExists())
+                Init();
+            connection.Open();
+            using (var trans = connection.BeginTransaction())
+            {
+                var split = new Regex(delimiter, RegexOptions.Multiline);
+                foreach (var sql in split.Split(migration.DownSql))
+                {
+                    if (!string.IsNullOrEmpty(sql))
+                    {
+                        var cmd = connection.CreateCommand();
+                        cmd.Transaction = trans;
+                        cmd.CommandText = sql;
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                var migrationCmd = connection.CreateCommand();
+                migrationCmd.Transaction = trans;
+                migrationCmd.CommandText = string.Format("delete from {0} where `key` = @version", tableName);
+                var version = migrationCmd.CreateParameter();
+                version.ParameterName = "version";
+                version.Value = migration.Version;
+                migrationCmd.Parameters.Add(version);
+                migrationCmd.ExecuteNonQuery();
+                trans.Commit();
+            }
+            connection.Close();
+            return Create();
+        }
+
     }
 }
